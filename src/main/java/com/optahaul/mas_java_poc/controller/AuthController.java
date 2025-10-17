@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.optahaul.mas_java_poc.dto.AuthResponse;
 import com.optahaul.mas_java_poc.dto.LoginRequest;
+import com.optahaul.mas_java_poc.multitenancy.TenantContext;
 import com.optahaul.mas_java_poc.security.JwtTokenProvider;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -44,7 +45,10 @@ public class AuthController {
 		String role = userDetails.getAuthorities().stream().findFirst().map(GrantedAuthority::getAuthority)
 				.orElse("ROLE_USER");
 
+		// Get tenant ID from context to include in response
+		String tenantId = TenantContext.getCurrentTenant();
+
 		return ResponseEntity
-				.ok(new AuthResponse(jwt, userDetails.getUsername(), role.replace("ROLE_", "")));
+				.ok(new AuthResponse(jwt, userDetails.getUsername(), role.replace("ROLE_", ""), tenantId));
 	}
 }

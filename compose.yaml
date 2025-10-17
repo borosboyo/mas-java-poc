@@ -1,17 +1,54 @@
 services:
-  postgres:
+  # Catalog Database - stores tenant metadata
+  catalog-postgres:
     image: 'postgres:latest'
     environment:
-      - 'POSTGRES_DB=postgres'
+      - 'POSTGRES_DB=catalog_db'
       - 'POSTGRES_PASSWORD=secret'
       - 'POSTGRES_USER=myuser'
     ports:
-      - '5432:5432'
+      - '5433:5432'
     volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - catalog-data:/var/lib/postgresql/data
+      - ./init-catalog.sql:/docker-entrypoint-initdb.d/01-init-catalog.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U myuser -d postgres"]
+      test: ["CMD-SHELL", "pg_isready -U myuser -d catalog_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Tenant 1 Database
+  tenant1-postgres:
+    image: 'postgres:latest'
+    environment:
+      - 'POSTGRES_DB=tenant_company1'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=myuser'
+    ports:
+      - '5434:5432'
+    volumes:
+      - tenant1-data:/var/lib/postgresql/data
+      - ./init-tenant.sql:/docker-entrypoint-initdb.d/01-init-tenant.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d tenant_company1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Tenant 2 Database
+  tenant2-postgres:
+    image: 'postgres:latest'
+    environment:
+      - 'POSTGRES_DB=tenant_company2'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=myuser'
+    ports:
+      - '5435:5432'
+    volumes:
+      - tenant2-data:/var/lib/postgresql/data
+      - ./init-tenant.sql:/docker-entrypoint-initdb.d/01-init-tenant.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d tenant_company2"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -34,20 +71,27 @@ services:
     image: 'mas-java-poc:latest'
     build: .
     depends_on:
-      postgres:
+      catalog-postgres:
+        condition: service_healthy
+      tenant1-postgres:
+        condition: service_healthy
+      tenant2-postgres:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
-      SPRING_DATASOURCE_USERNAME: myuser
-      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_DATASOURCE_CATALOG_URL: jdbc:postgresql://catalog-postgres:5432/catalog_db
+      SPRING_DATASOURCE_CATALOG_USERNAME: myuser
+      SPRING_DATASOURCE_CATALOG_PASSWORD: secret
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: guest
       SPRING_RABBITMQ_PASSWORD: guest
+      MULTITENANCY_ENABLED: true
     ports:
       - '8080:8080'
 
 volumes:
-  postgres-data:
+  catalog-data:
+  tenant1-data:
+  tenant2-data:

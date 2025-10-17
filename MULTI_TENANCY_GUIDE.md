@@ -6,325 +6,315 @@ This project implements **database-per-tenant** multi-tenancy, where each tenant
 
 ## Architecture
 
+### Database Structure
+
+**Catalog Database (Port 5433)**
+- **Only contains**: `tenants` table (metadata about each company)
+- **Purpose**: Store tenant connection information and configuration
+
+**Tenant Databases (Ports 5434, 5435, etc.)**
+- **Contains**: `users`, `authors`, `books` tables (all business data)
+- **Purpose**: Isolated data storage per company
+
+### Entity Organization
+
+- **Catalog Entities** (`com.optahaul.mas_java_poc.domain.catalog`):
+  - `Tenant` - Managed by catalog database
+- **Tenant Entities** (`com.optahaul.mas_java_poc.domain`):
+  - `User` - Managed by tenant databases
+  - `Author` - Managed by tenant databases
+  - `Book` - Managed by tenant databases
+
 ### Components
 
-1. **TenantContext**: Thread-local storage for the current tenant ID
-2. **TenantFilter**: HTTP filter that extracts tenant ID from request headers
-3. **TenantRoutingDataSource**: Routes database connections to the correct tenant database
-4. **TenantDataSourceManager**: Creates and manages datasources for each tenant
-5. **MultiTenancyConfig**: Configures multi-tenancy and runs Flyway migrations per tenant
+1. **Catalog Database**: Central database storing tenant metadata and connection information
+2. **TenantContext**: Thread-local storage for the current tenant ID
+3. **TenantInterceptor**: Intercepts HTTP requests to extract tenant from subdomain
+4. **TenantRoutingDataSource**: Routes database connections to the correct tenant database
+5. **TenantService**: Manages tenant metadata with caching
+6. **MultiTenancyConfig**: Configures dual entity managers (catalog + tenant)
 
 ### How It Works
 
 ```
-HTTP Request with X-Tenant-ID header
+HTTP Request to company1.optahaul.com
     ↓
-TenantFilter extracts tenant ID
+TenantInterceptor extracts "company1" from subdomain
     ↓
 TenantContext stores tenant ID (thread-local)
     ↓
-TenantRoutingDataSource routes to correct database
+TenantRoutingDataSource queries catalog DB for connection info
     ↓
-TenantDataSourceManager provides tenant-specific DataSource
+Creates/retrieves HikariCP connection pool for tenant
     ↓
-Application code executes against tenant database
+Application code executes against tenant database (users, authors, books)
 ```
 
-## Database Structure
+### Authentication Flow
 
-- **Master Database**: `postgres` (used to create tenant databases)
-- **Tenant Databases**: `tenant_<tenantId>` (e.g., `tenant_tenant1`, `tenant_tenant2`)
+```
+POST /api/auth/login with Host: company1.optahaul.com
+    ↓
+TenantInterceptor extracts tenant "company1"
+    ↓
+UserDetailsService queries users table from company1's tenant DB
+    ↓
+Authentication happens using company1's users
+    ↓
+JWT token returned with tenant context
+```
 
-Each tenant database has:
-- Complete schema (authors, books, users, etc.)
-- Independent data
-- Own Flyway migration history
+## Quick Start
 
-## Usage
-
-### 1. Specify Tenant in HTTP Requests
-
-Add the `X-Tenant-ID` header to every API request:
+### 1. Start All Databases
 
 ```bash
-# Access tenant1's data
-curl -H "X-Tenant-ID: tenant1" http://localhost:8080/api/authors
-
-# Access tenant2's data
-curl -H "X-Tenant-ID: tenant2" http://localhost:8080/api/authors
-
-# No header = defaults to tenant1
-curl http://localhost:8080/api/authors
+./setup-multitenancy.sh
 ```
 
-### 2. Provision New Tenants
+This script:
+- Starts catalog DB, tenant1 DB, tenant2 DB
+- Initializes catalog with tenant metadata
+- Verifies configuration
 
-Create a new tenant database:
+### 2. Start the Application
 
 ```bash
-# Provision tenant3
-curl -X POST http://localhost:8080/api/tenants/tenant3/provision
+./mvnw spring-boot:run
 ```
 
-This will:
-- Create database `tenant_tenant3`
-- Run all Flyway migrations
-- Cache the datasource for future requests
+### 3. Test Multi-Tenancy
 
-### 3. List All Tenants
+#### Using subdomain (requires host file or DNS)
+
+Add to `/etc/hosts`:
+
+```
+127.0.0.1 company1.optahaul.com
+127.0.0.1 company2.optahaul.com
+```
+
+Then access:
 
 ```bash
-curl http://localhost:8080/api/tenants
+# Tenant 1 data
+curl http://company1.optahaul.com:8080/api/authors
+
+# Tenant 2 data
+curl http://company2.optahaul.com:8080/api/authors
 ```
 
-Returns: `["tenant1", "tenant2", "tenant3"]`
+#### Manual Testing (Without DNS)
 
-## Testing Multi-Tenancy
-
-### Scenario: Create Authors for Different Tenants
-
-```bash
-# Create author for Company A (tenant1)
-curl -X POST http://localhost:8080/api/authors \
-  -H "Content-Type: application/json" \
-  -H "X-Tenant-ID: tenant1" \
-  -d '{
-    "name": "Company A Author",
-    "birthDate": "1980-01-01",
-    "nationality": "American"
-  }'
-
-# Create author for Company B (tenant2)
-curl -X POST http://localhost:8080/api/authors \
-  -H "Content-Type: application/json" \
-  -H "X-Tenant-ID: tenant2" \
-  -d '{
-    "name": "Company B Author",
-    "birthDate": "1990-02-02",
-    "nationality": "British"
-  }'
-
-# List authors for tenant1 (only sees Company A's author)
-curl -H "X-Tenant-ID: tenant1" http://localhost:8080/api/authors
-
-# List authors for tenant2 (only sees Company B's author)
-curl -H "X-Tenant-ID: tenant2" http://localhost:8080/api/authors
-```
-
-### Verify Data Isolation
-
-```bash
-# Connect to tenant1 database
-psql -U myuser -d tenant_tenant1 -c "SELECT * FROM authors;"
-
-# Connect to tenant2 database
-psql -U myuser -d tenant_tenant2 -c "SELECT * FROM authors;"
-```
-
-Each database will only show its own tenant's data.
-
-## Default Tenants
-
-The application automatically provisions these tenants on startup:
-- `tenant1` (default if no header is provided)
-- `tenant2`
-- `tenant3`
+You can still test by modifying the `TenantInterceptor` to extract tenant from a header temporarily, or use a proxy.
 
 ## Configuration
 
 ### application.properties
 
 ```properties
-# Master database for creating tenant databases
-spring.datasource.url=jdbc:postgresql://localhost:5432/postgres
-spring.datasource.username=myuser
-spring.datasource.password=secret
+# Catalog Database
+spring.datasource.catalog.url=jdbc:postgresql://localhost:5433/catalog_db
+spring.datasource.catalog.username=myuser
+spring.datasource.catalog.password=secret
+
+# Tenant Configuration
+multitenancy.enabled=true
+multitenancy.tenant-resolution-strategy=subdomain
+multitenancy.default-domain=optahaul.com
+
+# HikariCP Pool Settings
+tenant.datasource.hikari.maximum-pool-size=10
+tenant.datasource.hikari.minimum-idle=2
 ```
 
-### Environment Variables (Docker)
+## Adding New Tenants
+
+### Programmatic Approach
+
+```java
+@Autowired
+private TenantService tenantService;
+
+public void createNewTenant() {
+    Tenant tenant = tenantService.createTenant(
+        "company3",           // tenant ID
+        "Company Three Corp", // company name
+        "company3"            // subdomain
+    );
+}
+```
+
+### Manual Database Approach
+
+```sql
+INSERT INTO tenants (tenant_id, company_name, subdomain, db_url, db_username, db_password, status)
+VALUES (
+    'company3',
+    'Company Three Corp',
+    'company3',
+    'jdbc:postgresql://localhost:5436/tenant_company3',
+    'myuser',
+    'secret',
+    'ACTIVE'
+);
+```
+
+Then create the physical database:
 
 ```bash
-SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/postgres
-SPRING_DATASOURCE_USERNAME=myuser
-SPRING_DATASOURCE_PASSWORD=secret
+createdb -h localhost -p 5436 -U myuser tenant_company3
 ```
 
 ## Docker Compose Setup
 
-Update `compose.yaml` to use postgres as the master database:
+The `compose.yaml` includes:
+- **catalog-postgres**: Port 5433 (Catalog DB)
+- **tenant1-postgres**: Port 5434 (Company 1)
+- **tenant2-postgres**: Port 5435 (Company 2)
+- **rabbitmq**: Ports 5672, 15672
 
-```yaml
-services:
-  postgres:
-    image: 'postgres:latest'
-    environment:
-      - 'POSTGRES_DB=postgres'
-      - 'POSTGRES_PASSWORD=secret'
-      - 'POSTGRES_USER=myuser'
-    ports:
-      - '5432:5432'
+## Security Considerations
 
-  backend:
-    build: .
-    depends_on:
-      - postgres
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/postgres
-      SPRING_DATASOURCE_USERNAME: myuser
-      SPRING_DATASOURCE_PASSWORD: secret
-    ports:
-      - '8080:8080'
-```
+### Production Recommendations
 
-## Flyway Migrations
+1. **Encrypt Database Passwords**: Use AWS Secrets Manager or Vault
+2. **Connection Pooling**: Configure per tenant based on usage
+3. **Tenant Isolation**: Validate tenant access in all API endpoints
+4. **Rate Limiting**: Implement per-tenant rate limits
+5. **Audit Logging**: Log all tenant context switches
 
-All migrations in `src/main/resources/db/migration/` are applied to each tenant database:
-
-- `V1__initial_schema.sql`
-- `V2__create_quartz_tables.sql`
-- `V3__add_isbn_to_books.sql`
-- Future migrations...
-
-When adding a new migration, it will be applied to:
-- All existing tenant databases on next startup
-- New tenant databases when provisioned
-
-## Production Considerations
-
-### 1. Tenant Registry
-
-In production, maintain a tenant registry database:
-
-```sql
-CREATE TABLE tenants (
-    id VARCHAR(50) PRIMARY KEY,
-    company_name VARCHAR(255),
-    created_at TIMESTAMP,
-    status VARCHAR(20)
-);
-```
-
-### 2. Connection Pooling
-
-Configure per-tenant connection pools:
-
-```properties
-spring.datasource.hikari.maximum-pool-size=5
-spring.datasource.hikari.minimum-idle=2
-```
-
-### 3. Tenant Discovery
-
-Instead of hardcoded tenant list, load from registry:
+### Example: Using Secrets Manager
 
 ```java
-@PostConstruct
-public void initializeTenants() {
-    List<String> tenants = tenantRepository.findAllActiveTenantIds();
-    tenants.forEach(dataSourceManager::getDataSource);
+private DataSource createTenantDataSource(String tenantId) {
+    Tenant tenant = tenantService.findByTenantId(tenantId);
+
+    // Fetch password from secrets manager
+    String password = secretsManager.getSecret(
+        "tenant/" + tenantId + "/db-password"
+    );
+
+    HikariDataSource ds = new HikariDataSource();
+    ds.setJdbcUrl(tenant.getDbUrl());
+    ds.setUsername(tenant.getDbUsername());
+    ds.setPassword(password); // Use fetched secret
+    return ds;
 }
 ```
 
-### 4. Security
+## Monitoring
 
-- Validate tenant ID against authenticated user
-- Implement tenant-based authorization
-- Add rate limiting per tenant
+### Check Tenant Metadata
 
-```java
-@Component
-public class TenantSecurityFilter extends OncePerRequestFilter {
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, ...) {
-        String tenantId = request.getHeader("X-Tenant-ID");
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-
-        if (!userService.hasAccessToTenant(auth.getName(), tenantId)) {
-            throw new AccessDeniedException("User not authorized for tenant");
-        }
-        // ... continue
-    }
-}
+```bash
+psql -h localhost -p 5433 -U myuser -d catalog_db \
+  -c "SELECT tenant_id, company_name, subdomain, status FROM tenants;"
 ```
 
-### 5. Monitoring
+### Verify Tenant Databases
 
-Track metrics per tenant:
-- Database connections
-- Query performance
-- Storage usage
-- API request rates
+```bash
+# Check tenant1 data
+psql -h localhost -p 5434 -U myuser -d tenant_company1 -c "\dt"
+
+# Check tenant2 data
+psql -h localhost -p 5435 -U myuser -d tenant_company2 -c "\dt"
+```
 
 ## Troubleshooting
 
-### Issue: "No tenant context set"
+### Issue: "Cannot identify tenant"
 
-**Cause**: Missing `X-Tenant-ID` header or filter not applied
+**Cause**: Subdomain doesn't match any tenant in catalog
+**Solution**:
+1. Check catalog DB: `SELECT * FROM tenants;`
+2. Verify subdomain in request matches tenant.subdomain
+3. Check `/etc/hosts` or DNS configuration
 
-**Solution**: Ensure TenantFilter is registered and header is present
+### Issue: "Tenant not found or inactive"
 
-### Issue: Database creation fails
+**Cause**: Tenant status is not "ACTIVE" or doesn't exist
+**Solution**: Update tenant status in catalog DB
 
-**Cause**: Insufficient PostgreSQL permissions
+### Issue: Connection pool exhausted
 
-**Solution**: Grant CREATE DATABASE permission:
+**Cause**: Too many concurrent connections
+**Solution**: Increase `tenant.datasource.hikari.maximum-pool-size`
 
-```sql
-ALTER USER myuser CREATEDB;
+## Testing
+
+The test suite uses H2 in-memory databases with multi-tenancy disabled.
+
+### application-test.properties
+
+```properties
+# Catalog DB for tests
+spring.datasource.catalog.url=jdbc:h2:mem:catalog_testdb;MODE=PostgreSQL
+multitenancy.enabled=false
 ```
 
-### Issue: Flyway migration errors
+## Performance Tips
 
-**Cause**: Migration already applied or failed
+1. **Cache Tenant Metadata**: Already enabled with `@Cacheable`
+2. **Connection Pool Tuning**: Adjust based on tenant usage patterns
+3. **Lazy DataSource Creation**: DataSources created on-demand
+4. **DataSource Cleanup**: Call `removeTenantDataSource()` for suspended tenants
 
-**Solution**: Check flyway_schema_history table in tenant database:
+## Migration Strategy
 
-```sql
-SELECT * FROM tenant_tenant1.flyway_schema_history;
+### From Single-Tenant to Multi-Tenant
+
+1. **Backup existing data**
+2. **Create catalog database**
+3. **Insert tenant metadata**
+4. **Create tenant-specific databases**
+5. **Migrate data to tenant databases**
+6. **Update application.properties**
+7. **Deploy with multi-tenancy enabled**
+
+## API Examples
+
+### Creating Resources (Tenant-Specific)
+
+```bash
+# Create author for company1
+curl -X POST http://company1.optahaul.com:8080/api/authors \
+  -H "Content-Type: application/json" \
+  -d '{"name": "John Doe", "birthDate": "1980-01-01"}'
+
+# Create author for company2
+curl -X POST http://company2.optahaul.com:8080/api/authors \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Jane Smith", "birthDate": "1985-05-15"}'
 ```
 
-## API Endpoints
+### Verifying Data Isolation
 
-### Tenant Management
+```bash
+# List company1 authors (only shows company1 data)
+curl http://company1.optahaul.com:8080/api/authors
 
-| Method |              Endpoint               |     Description      |
-|--------|-------------------------------------|----------------------|
-| GET    | `/api/tenants`                      | List all tenants     |
-| POST   | `/api/tenants/{tenantId}/provision` | Provision new tenant |
+# List company2 authors (only shows company2 data)
+curl http://company2.optahaul.com:8080/api/authors
+```
 
-### Data Operations (require X-Tenant-ID header)
+## Architecture Diagram
 
-| Method |    Endpoint    |       Description        |
-|--------|----------------|--------------------------|
-| GET    | `/api/authors` | List tenant's authors    |
-| POST   | `/api/authors` | Create author for tenant |
-| GET    | `/api/books`   | List tenant's books      |
-| POST   | `/api/books`   | Create book for tenant   |
-
-## Example Postman Collection
-
-See `POSTMAN_TESTING_GUIDE.md` for complete examples with multi-tenancy headers.
-
-## Benefits
-
-1. **Complete Data Isolation**: Each tenant has its own database
-2. **Independent Scaling**: Scale tenant databases independently
-3. **Backup & Restore**: Per-tenant backup and recovery
-4. **Customization**: Tenant-specific schema modifications possible
-5. **Compliance**: Meet data residency requirements per tenant
-
-## Limitations
-
-1. **Resource Usage**: More databases = more connections and memory
-2. **Management Overhead**: Multiple databases to maintain
-3. **Cross-Tenant Queries**: Not possible (by design for isolation)
-4. **Migration Time**: Migrations run serially per tenant
-
-## Alternative Approaches
-
-This implementation uses **database-per-tenant**. Other approaches include:
-
-1. **Schema-per-tenant**: All tenants in one database, different schemas
-2. **Row-level security**: All tenants in one database/schema, filtered by tenant_id column
-
-Each has trade-offs between isolation, performance, and management complexity.
+```
+┌─────────────────────────────────────────────────┐
+│           Application Layer                      │
+│  (Spring Boot + JPA + Multi-Tenancy Config)     │
+└─────────────┬───────────────────────────────────┘
+              │
+              ├──────────────────┬─────────────────┐
+              │                  │                 │
+    ┌─────────▼─────────┐  ┌────▼──────┐  ┌──────▼─────┐
+    │  Catalog DB       │  │ Tenant 1  │  │  Tenant 2  │
+    │  (Port 5433)      │  │ (Port     │  │  (Port     │
+    │                   │  │  5434)    │  │   5435)    │
+    │ - tenants table   │  │ - authors │  │  - authors │
+    │ - metadata        │  │ - books   │  │  - books   │
+    └───────────────────┘  │ - users   │  │  - users   │
+                           └───────────┘  └────────────┘
+```

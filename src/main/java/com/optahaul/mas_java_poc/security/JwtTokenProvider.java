@@ -9,6 +9,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import com.optahaul.mas_java_poc.multitenancy.TenantContext;
+
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
@@ -23,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class JwtTokenProvider {
 
+	// Dummy secret
 	@Value("${jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
 	private String jwtSecret;
 
@@ -34,15 +37,31 @@ public class JwtTokenProvider {
 		Date now = new Date();
 		Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
-		return Jwts.builder().subject(userDetails.getUsername()).issuedAt(now).expiration(expiryDate)
-				.signWith(getSigningKey()).compact();
+		// Get current tenant ID and include it in the token
+		String tenantId = TenantContext.getCurrentTenant();
+
+		return Jwts.builder()
+				.subject(userDetails.getUsername())
+				.claim("tenantId", tenantId)
+				.issuedAt(now)
+				.expiration(expiryDate)
+				.signWith(getSigningKey())
+				.compact();
 	}
 
 	public String generateTokenFromUsername(String username) {
 		Date now = new Date();
 		Date expiryDate = new Date(now.getTime() + jwtExpirationMs);
 
-		return Jwts.builder().subject(username).issuedAt(now).expiration(expiryDate).signWith(getSigningKey())
+		// Get current tenant ID and include it in the token
+		String tenantId = TenantContext.getCurrentTenant();
+
+		return Jwts.builder()
+				.subject(username)
+				.claim("tenantId", tenantId)
+				.issuedAt(now)
+				.expiration(expiryDate)
+				.signWith(getSigningKey())
 				.compact();
 	}
 
@@ -51,9 +70,24 @@ public class JwtTokenProvider {
 		return claims.getSubject();
 	}
 
+	public String getTenantIdFromToken(String token) {
+		Claims claims = Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token).getPayload();
+		return claims.get("tenantId", String.class);
+	}
+
 	public boolean validateToken(String token) {
 		try {
 			Jwts.parser().verifyWith(getSigningKey()).build().parseSignedClaims(token);
+
+			// Validate that the token's tenant matches the current request's tenant
+			String tokenTenantId = getTenantIdFromToken(token);
+			String currentTenantId = TenantContext.getCurrentTenant();
+
+			if (tokenTenantId == null || !tokenTenantId.equals(currentTenantId)) {
+				log.error("Token tenant '{}' does not match current tenant '{}'", tokenTenantId, currentTenantId);
+				return false;
+			}
+
 			return true;
 		} catch (SignatureException e) {
 			log.error("Invalid JWT signature: {}", e.getMessage());

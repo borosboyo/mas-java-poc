@@ -14,10 +14,10 @@ RUN chmod +x /wait-for-it.sh
 # Expose port 8080
 EXPOSE 8080
 
-# Set environment variables for DB connection (can be overridden by compose)
-ENV SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/postgres
-ENV SPRING_DATASOURCE_USERNAME=myuser
-ENV SPRING_DATASOURCE_PASSWORD=secret
+# Set environment variables for catalog DB connection (can be overridden by compose)
+ENV SPRING_DATASOURCE_CATALOG_URL=jdbc:postgresql://catalog-postgres:5432/catalog_db
+ENV SPRING_DATASOURCE_CATALOG_USERNAME=myuser
+ENV SPRING_DATASOURCE_CATALOG_PASSWORD=secret
 
-# Wait for DB, then run the app
-ENTRYPOINT ["/wait-for-it.sh", "postgres:5432", "--", "java", "-jar", "app.jar"]
+# Wait for catalog DB, then run the app
+ENTRYPOINT ["/wait-for-it.sh", "catalog-postgres:5432", "--", "java", "-jar", "app.jar"]

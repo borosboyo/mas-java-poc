@@ -21,7 +21,7 @@ public class OpenApiConfig {
 				.info(new Info().title("MAS Java PoC API").version("1.0")
 						.description(
 								"Comprehensive Spring Boot application with CRUD operations, multi-tenancy, WebSocket, " + "background jobs, and role-based access control")
-						.contact(new Contact().name("API Support").email("support@example.com")).license(new License()
+						.contact(new Contact().name("API Support").email("gergo.boros@optahaul.com")).license(new License()
 								.name("Apache 2.0").url("https://www.apache.org/licenses/LICENSE-2.0.html")));
 	}
 }

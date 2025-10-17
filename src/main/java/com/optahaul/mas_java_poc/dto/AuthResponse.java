@@ -13,15 +13,19 @@ public class AuthResponse {
 
 	private String token;
 
+	@Builder.Default
 	private String type = "Bearer";
 
 	private String username;
 
 	private String role;
 
-	public AuthResponse(String token, String username, String role) {
+	private String tenantId;
+
+	public AuthResponse(String token, String username, String role, String tenantId) {
 		this.token = token;
 		this.username = username;
 		this.role = role;
+		this.tenantId = tenantId;
 	}
 }

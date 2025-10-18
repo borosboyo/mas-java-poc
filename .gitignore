@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Generated OpenAPI/Swagger files ###
+openapi.json
+generated-client/

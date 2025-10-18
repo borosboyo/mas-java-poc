@@ -6,7 +6,6 @@
     <artifactId>spring-boot-starter-parent</artifactId>
     <version>3.5.6</version>
     <relativePath/>
-    <!-- lookup parent from repository -->
   </parent>
   <groupId>com.optahaul</groupId>
   <artifactId>mas-java-poc</artifactId>
@@ -32,6 +31,7 @@
     <springdoc.version>2.7.0</springdoc.version>
     <checkstyle.version>12.0.1</checkstyle.version>
     <openapi-generator.version>7.10.0</openapi-generator.version>
+    <skip.openapi.generation>true</skip.openapi.generation>
   </properties>
   <dependencies>
     <dependency>
@@ -104,6 +104,11 @@
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
       <version>${springdoc.version}</version>
     </dependency>
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <version>2.0.1</version>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -146,6 +151,99 @@
 
   <build>
     <plugins>
+      <!-- STEP 1: Generate OpenAPI spec using springdoc at test time -->
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+        <configuration>
+          <excludes>
+            <exclude>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+            </exclude>
+          </excludes>
+        </configuration>
+        <executions>
+          <!-- Start app, generate OpenAPI, stop app -->
+          <execution>
+            <id>pre-integration-test</id>
+            <goals>
+              <goal>start</goal>
+            </goals>
+            <configuration>
+              <skip>${skip.openapi.generation}</skip>
+              <profiles>
+                <profile>openapi</profile>
+              </profiles>
+              <jvmArguments>-Dspring.profiles.active=openapi</jvmArguments>
+              <wait>2000</wait>
+              <maxAttempts>300</maxAttempts>
+            </configuration>
+          </execution>
+          <execution>
+            <id>post-integration-test</id>
+            <goals>
+              <goal>stop</goal>
+            </goals>
+            <configuration>
+              <skip>${skip.openapi.generation}</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- STEP 2: Download OpenAPI spec from running app -->
+      <plugin>
+        <groupId>org.springdoc</groupId>
+        <artifactId>springdoc-openapi-maven-plugin</artifactId>
+        <version>1.5</version>
+        <executions>
+          <execution>
+            <id>generate-openapi-docs</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <phase>integration-test</phase>
+            <configuration>
+              <apiDocsUrl>http://localhost:8080/api-docs</apiDocsUrl>
+              <outputFileName>openapi.json</outputFileName>
+              <outputDir>${project.build.directory}</outputDir>
+              <skip>${skip.openapi.generation}</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- STEP 3: Generate TypeScript client from OpenAPI spec -->
+      <plugin>
+        <groupId>org.openapitools</groupId>
+        <artifactId>openapi-generator-maven-plugin</artifactId>
+        <version>${openapi-generator.version}</version>
+        <executions>
+          <execution>
+            <id>generate-typescript-client</id>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <phase>post-integration-test</phase>
+            <configuration>
+              <inputSpec>${project.build.directory}/openapi.json</inputSpec>
+              <generatorName>typescript-fetch</generatorName>
+              <output>${project.build.directory}/generated-sources/openapi-client</output>
+              <apiPackage>api</apiPackage>
+              <modelPackage>models</modelPackage>
+              <configOptions>
+                <supportsES6>true</supportsES6>
+                <npmName>@optahaul/mas-client</npmName>
+                <npmVersion>1.0.0</npmVersion>
+              </configOptions>
+              <skip>${skip.openapi.generation}</skip>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
+      <!-- Compiler configuration -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
@@ -169,18 +267,7 @@
           </annotationProcessorPaths>
         </configuration>
       </plugin>
-      <plugin>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-maven-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>
-              <groupId>org.projectlombok</groupId>
-              <artifactId>lombok</artifactId>
-            </exclude>
-          </excludes>
-        </configuration>
-      </plugin>
+
       <!-- Spotless for code formatting -->
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
@@ -211,6 +298,9 @@
             <includes>
               <include>**/*.md</include>
             </includes>
+            <excludes>
+              <exclude>target/**</exclude>
+            </excludes>
             <flexmark/>
             <trimTrailingWhitespace/>
             <endWithNewline/>
@@ -220,6 +310,9 @@
               <include>**/*.yml</include>
               <include>**/*.yaml</include>
             </includes>
+            <excludes>
+              <exclude>target/**</exclude>
+            </excludes>
             <trimTrailingWhitespace/>
             <endWithNewline/>
           </yaml>
@@ -241,6 +334,7 @@
           </execution>
         </executions>
       </plugin>
+
       <!-- Checkstyle for code quality -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -269,39 +363,26 @@
           </execution>
         </executions>
       </plugin>
-      <!-- Generate TypeScript React client from the OpenAPI spec -->
-      <!-- To generate the client: -->
-      <!-- 1. Start your application: mvn spring-boot:run -->
-      <!-- 2. Download the spec: curl http://localhost:8080/v3/api-docs -o openapi.json -->
-      <!-- 3. Generate client: mvn openapi-generator:generate -Dgenerate.client=true -->
-      <plugin>
-        <groupId>org.openapitools</groupId>
-        <artifactId>openapi-generator-maven-plugin</artifactId>
-        <version>${openapi-generator.version}</version>
-        <executions>
-          <execution>
-            <id>generate-typescript-react-client</id>
-            <goals>
-              <goal>generate</goal>
-            </goals>
-            <phase>none</phase>
-            <configuration>
-              <inputSpec>${project.basedir}/openapi.json</inputSpec>
-              <output>${project.basedir}/generated-client</output>
-              <generatorName>typescript-fetch</generatorName>
-              <configOptions>
-                <supportsES6>true</supportsES6>
-                <withInterfaces>true</withInterfaces>
-                <modelPropertyNaming>camelCase</modelPropertyNaming>
-                <npmName>@optahaul/mas-java-poc-client</npmName>
-                <npmVersion>1.0.0</npmVersion>
-              </configOptions>
-              <skipIfSpecIsUnchanged>true</skipIfSpecIsUnchanged>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
     </plugins>
   </build>
+
+  <!-- Profiles for controlling OpenAPI generation -->
+  <profiles>
+    <profile>
+      <id>skip-openapi</id>
+      <properties>
+        <skip.openapi.generation>true</skip.openapi.generation>
+      </properties>
+    </profile>
+    <profile>
+      <id>generate-openapi</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <skip.openapi.generation>false</skip.openapi.generation>
+      </properties>
+    </profile>
+  </profiles>
 
 </project>

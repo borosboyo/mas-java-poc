@@ -2,6 +2,7 @@ package com.optahaul.mas_java_poc.config;
 
 import java.util.Collections;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -16,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@Profile("!openapi")
 public class CustomUserDetailsService implements UserDetailsService {
 
 	private final UserRepository userRepository;

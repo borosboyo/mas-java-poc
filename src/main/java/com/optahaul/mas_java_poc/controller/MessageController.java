@@ -1,5 +1,6 @@
 package com.optahaul.mas_java_poc.controller;
 
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -20,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/messages")
 @RequiredArgsConstructor
 @Tag(name = "Messages", description = "RabbitMQ message testing API")
+@Profile("!openapi")
 public class MessageController {
 
 	private final MessageProducer messageProducer;

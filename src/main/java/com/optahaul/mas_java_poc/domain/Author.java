@@ -38,6 +38,9 @@ public class Author {
 	@Column(name = "birth_date")
 	private LocalDate birthDate;
 
+	@Column(name = "bio")
+	private String bio;
+
 	@OneToMany(mappedBy = "author", cascade = CascadeType.ALL, orphanRemoval = true)
 	@Builder.Default
 	private List<Book> books = new ArrayList<>();

@@ -12,12 +12,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 
 /**
  * RabbitMQ Configuration for message queue setup. Only loads when RabbitMQ
  * classes are available and not explicitly disabled
  */
 @Configuration
+@Profile("!openapi")
 @ConditionalOnClass(ConnectionFactory.class)
 @ConditionalOnProperty(name = "spring.rabbitmq.host", matchIfMissing = false)
 public class RabbitMQConfig {

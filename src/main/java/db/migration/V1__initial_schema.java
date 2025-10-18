@@ -9,20 +9,6 @@ public class V1__initial_schema extends BaseJavaMigration {
 	@Override
 	public void migrate(Context context) throws Exception {
 		try (Statement stmt = context.getConnection().createStatement()) {
-			// Create tenants table
-			stmt.execute(
-					"CREATE TABLE IF NOT EXISTS tenants (" +
-							"id BIGSERIAL PRIMARY KEY, " +
-							"tenant_id VARCHAR(255) NOT NULL UNIQUE, " +
-							"company_name VARCHAR(255) NOT NULL, " +
-							"subdomain VARCHAR(255) UNIQUE, " +
-							"custom_domain VARCHAR(255), " +
-							"db_url VARCHAR(500) NOT NULL, " +
-							"db_username VARCHAR(255) NOT NULL, " +
-							"db_password VARCHAR(255) NOT NULL, " +
-							"status VARCHAR(50) NOT NULL, " +
-							"db_schema VARCHAR(255))");
-
 			// Create users table
 			stmt.execute(
 					"CREATE TABLE IF NOT EXISTS users (" +
@@ -59,32 +45,50 @@ public class V1__initial_schema extends BaseJavaMigration {
 							"CONSTRAINT fk_author FOREIGN KEY (author_id) REFERENCES authors(id) ON DELETE CASCADE)");
 
 			// Create indexes
-			stmt.execute("CREATE INDEX idx_books_author_id ON books(author_id)");
-			stmt.execute("CREATE INDEX idx_books_genre ON books(genre)");
-			stmt.execute("CREATE INDEX idx_authors_name ON authors(name)");
-			stmt.execute("CREATE INDEX idx_users_username ON users(username)");
+			stmt.execute("CREATE INDEX IF NOT EXISTS idx_books_author_id ON books(author_id)");
+			stmt.execute("CREATE INDEX IF NOT EXISTS idx_books_genre ON books(genre)");
+			stmt.execute("CREATE INDEX IF NOT EXISTS idx_authors_name ON authors(name)");
+			stmt.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)");
 
-			// Insert sample users
+			// Insert default admin user (password is 'pass' - bcrypt encoded)
 			stmt.execute(
 					"INSERT INTO users (username, password, email, role, enabled) VALUES " +
-							"('admin', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', 'admin@example.com', 'ADMIN', true), " +
-							"('user', '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG', 'user@example.com', 'USER', true)");
+							"('admin', '$2a$12$8LOsmw8jcp/.GCg6pp7KDOG172e2GcSY9pB.9hpC2L3mN7RgRMWti', 'admin@tenant.com', 'ADMIN', true) " +
+							"ON CONFLICT (username) DO NOTHING");
 
 			// Insert sample authors
 			stmt.execute(
 					"INSERT INTO authors (name, birth_date) VALUES " +
 							"('George Orwell', '1903-06-25'), " +
 							"('J.K. Rowling', '1965-07-31'), " +
-							"('J.R.R. Tolkien', '1892-01-03')");
+							"('J.R.R. Tolkien', '1892-01-03') " +
+							"ON CONFLICT DO NOTHING");
 
 			// Insert sample books
 			stmt.execute(
-					"INSERT INTO books (title, genre, page_count, language, publication_date, author_id) VALUES " +
-							"('1984', 'Dystopian', 328, 'English', '1949-06-08', 1), " +
-							"('Animal Farm', 'Political Satire', 112, 'English', '1945-08-17', 1), " +
-							"('Harry Potter and the Philosopher''s Stone', 'Fantasy', 223, 'English', '1997-06-26', 2), " +
-							"('The Hobbit', 'Fantasy', 310, 'English', '1937-09-21', 3), " +
-							"('The Lord of the Rings', 'Fantasy', 1178, 'English', '1954-07-29', 3)");
+					"INSERT INTO books (title, genre, page_count, language, publication_date, author_id) " +
+							"SELECT '1984', 'Dystopian', 328, 'English', '1949-06-08'::DATE, a.id FROM authors a WHERE a.name = 'George Orwell' " +
+							"ON CONFLICT DO NOTHING");
+
+			stmt.execute(
+					"INSERT INTO books (title, genre, page_count, language, publication_date, author_id) " +
+							"SELECT 'Animal Farm', 'Political Satire', 112, 'English', '1945-08-17'::DATE, a.id FROM authors a WHERE a.name = 'George Orwell' " +
+							"ON CONFLICT DO NOTHING");
+
+			stmt.execute(
+					"INSERT INTO books (title, genre, page_count, language, publication_date, author_id) " +
+							"SELECT 'Harry Potter and the Philosopher''s Stone', 'Fantasy', 223, 'English', '1997-06-26'::DATE, a.id FROM authors a WHERE a.name = 'J.K. Rowling' " +
+							"ON CONFLICT DO NOTHING");
+
+			stmt.execute(
+					"INSERT INTO books (title, genre, page_count, language, publication_date, author_id) " +
+							"SELECT 'The Hobbit', 'Fantasy', 310, 'English', '1937-09-21'::DATE, a.id FROM authors a WHERE a.name = 'J.R.R. Tolkien' " +
+							"ON CONFLICT DO NOTHING");
+
+			stmt.execute(
+					"INSERT INTO books (title, genre, page_count, language, publication_date, author_id) " +
+							"SELECT 'The Lord of the Rings', 'Fantasy', 1178, 'English', '1954-07-29'::DATE, a.id FROM authors a WHERE a.name = 'J.R.R. Tolkien' " +
+							"ON CONFLICT DO NOTHING");
 		}
 	}
 }

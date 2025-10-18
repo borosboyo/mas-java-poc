@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import com.optahaul.mas_java_poc.config.RabbitMQConfig;
@@ -18,6 +19,7 @@ import lombok.RequiredArgsConstructor;
  */
 @Service
 @RequiredArgsConstructor
+@Profile("!openapi")
 public class MessageProducer {
 
 	private static final Logger logger = LoggerFactory.getLogger(MessageProducer.class);

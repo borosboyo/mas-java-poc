@@ -10,7 +10,6 @@ services:
       - '5433:5432'
     volumes:
       - catalog-data:/var/lib/postgresql/data
-      - ./init-catalog.sql:/docker-entrypoint-initdb.d/01-init-catalog.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U myuser -d catalog_db"]
       interval: 5s
@@ -28,7 +27,6 @@ services:
       - '5434:5432'
     volumes:
       - tenant1-data:/var/lib/postgresql/data
-      - ./init-tenant.sql:/docker-entrypoint-initdb.d/01-init-tenant.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U myuser -d tenant_company1"]
       interval: 5s
@@ -46,7 +44,6 @@ services:
       - '5435:5432'
     volumes:
       - tenant2-data:/var/lib/postgresql/data
-      - ./init-tenant.sql:/docker-entrypoint-initdb.d/01-init-tenant.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U myuser -d tenant_company2"]
       interval: 5s

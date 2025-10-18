@@ -2,6 +2,7 @@ package com.optahaul.mas_java_poc.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -22,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 @EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
+@Profile("!openapi")
 public class SecurityConfig {
 
 	private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -55,7 +57,12 @@ public class SecurityConfig {
 						.requestMatchers("/api/auth/**").permitAll()
 						.requestMatchers("/public/**").permitAll()
 						.requestMatchers("/ws/**").permitAll()
-						.requestMatchers("/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+						// Swagger/OpenAPI endpoints - MUST be before /api/** matcher
+						.requestMatchers("/api-docs", "/api-docs/**").permitAll()
+						.requestMatchers("/v3/api-docs", "/v3/api-docs/**").permitAll()
+						.requestMatchers("/swagger-ui", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+						.requestMatchers("/swagger-resources", "/swagger-resources/**").permitAll()
+						.requestMatchers("/webjars/**").permitAll()
 						.requestMatchers("/actuator/**").permitAll()
 						// Protected endpoints
 						.requestMatchers("/api/**").authenticated()

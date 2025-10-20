@@ -27,6 +27,22 @@ public class TenantFilter extends OncePerRequestFilter {
 			throws ServletException, IOException {
 
 		try {
+			// Allow access to OpenAPI/Swagger endpoints without tenant resolution
+			String uri = request.getRequestURI();
+			if (uri != null &&
+					(uri.startsWith("/api-docs") ||
+							uri.startsWith("/swagger") ||
+							uri.startsWith("/v3/api-docs") ||
+							uri.startsWith("/swagger-ui") ||
+							uri.equals("/openapi.json") ||
+							uri.startsWith("/ws") ||
+							uri.startsWith("/app/") ||
+							uri.startsWith("/topic/") ||
+							uri.startsWith("/queue/"))) {
+				filterChain.doFilter(request, response);
+				return;
+			}
+
 			String host = request.getServerName();
 			String tenantId = extractTenantFromHost(host);
 

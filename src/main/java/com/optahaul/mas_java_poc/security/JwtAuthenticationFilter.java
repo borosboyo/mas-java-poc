@@ -28,6 +28,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private final UserDetailsService userDetailsService;
 
 	@Override
+	protected boolean shouldNotFilter(HttpServletRequest request) throws ServletException {
+		String path = request.getRequestURI();
+		// Skip filter for WebSocket endpoints
+		return path.startsWith("/ws/") || path.equals("/ws") ||
+				path.startsWith("/app/") ||
+				path.startsWith("/topic/") ||
+				path.startsWith("/queue/");
+	}
+
+	@Override
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 			throws ServletException, IOException {
 		try {

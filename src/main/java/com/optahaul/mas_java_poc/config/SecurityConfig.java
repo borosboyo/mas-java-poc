@@ -50,13 +50,21 @@ public class SecurityConfig {
 
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-		http.csrf(csrf -> csrf.disable())
+		http.csrf(csrf -> csrf
+				.ignoringRequestMatchers("/ws/**")
+				.disable())
+				.headers(headers -> headers
+						.frameOptions(frame -> frame.sameOrigin()))
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 				.authorizeHttpRequests(auth -> auth
 						// Public endpoints
 						.requestMatchers("/api/auth/**").permitAll()
 						.requestMatchers("/public/**").permitAll()
 						.requestMatchers("/ws/**").permitAll()
+						.requestMatchers("/app/**").permitAll()
+						.requestMatchers("/topic/**").permitAll()
+						.requestMatchers("/queue/**").permitAll()
+						.requestMatchers("/api/test/websocket").permitAll()
 						// Swagger/OpenAPI endpoints - MUST be before /api/** matcher
 						.requestMatchers("/api-docs", "/api-docs/**").permitAll()
 						.requestMatchers("/v3/api-docs", "/v3/api-docs/**").permitAll()

@@ -43,7 +43,7 @@ public class AuthController {
 
 		UserDetails userDetails = (UserDetails) authentication.getPrincipal();
 		String role = userDetails.getAuthorities().stream().findFirst().map(GrantedAuthority::getAuthority)
-				.orElse("ROLE_USER");
+				.orElse("USER");
 
 		// Get tenant ID from context to include in response
 		String tenantId = TenantContext.getCurrentTenant();

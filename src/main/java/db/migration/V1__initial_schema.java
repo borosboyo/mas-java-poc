@@ -53,7 +53,7 @@ public class V1__initial_schema extends BaseJavaMigration {
 			// Insert default admin user (password is 'pass' - bcrypt encoded)
 			stmt.execute(
 					"INSERT INTO users (username, password, email, role, enabled) VALUES " +
-							"('admin', '$2a$12$8LOsmw8jcp/.GCg6pp7KDOG172e2GcSY9pB.9hpC2L3mN7RgRMWti', 'admin@tenant.com', 'ADMIN', true) " +
+							"('admin', '$2a$12$8LOsmw8jcp/.GCg6pp7KDOG172e2GcSY9pB.9hpC2L3mN7RgRMWti', 'admin@tenant.com', 'USER', true) " +
 							"ON CONFLICT (username) DO NOTHING");
 
 			// Insert sample authors

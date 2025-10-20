@@ -52,9 +52,14 @@ public class OpenApiSecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 		http
-				.csrf(csrf -> csrf.disable())
+				.csrf(csrf -> csrf
+						.ignoringRequestMatchers("/ws/**")
+						.disable())
+				.headers(headers -> headers
+						.frameOptions(frame -> frame.sameOrigin()))
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers("/v3/api-docs/**", "/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+						.requestMatchers("/ws/**", "/app/**", "/topic/**", "/queue/**").permitAll()
 						.anyRequest().permitAll()) // Allow all requests during OpenAPI generation
 				.httpBasic(basic -> {
 				});

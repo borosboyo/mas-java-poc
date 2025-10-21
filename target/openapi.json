@@ -1,0 +1,1260 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "MAS Java PoC API",
+    "description": "Comprehensive Spring Boot application with CRUD operations, multi-tenancy, WebSocket, background jobs, and role-based access control",
+    "contact": {
+      "name": "API Support",
+      "email": "gergo.boros@optahaul.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
+    },
+    "version": "1.0"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080",
+      "description": "Generated server url"
+    }
+  ],
+  "tags": [
+    {
+      "name": "WebSocket",
+      "description": "WebSocket demonstration endpoints"
+    },
+    {
+      "name": "Jobs",
+      "description": "Background and long-running job management"
+    },
+    {
+      "name": "Public API",
+      "description": "Publicly accessible APIs without authentication"
+    },
+    {
+      "name": "Authentication",
+      "description": "Authentication endpoints"
+    },
+    {
+      "name": "Authors",
+      "description": "Author management APIs"
+    },
+    {
+      "name": "Books",
+      "description": "Book management APIs"
+    }
+  ],
+  "paths": {
+    "/api/books/{id}": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "summary": "Get book by ID",
+        "description": "Retrieves a book by its ID",
+        "operationId": "getBookById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Book ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Book found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Book not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Books"
+        ],
+        "summary": "Update book",
+        "description": "Updates an existing book",
+        "operationId": "updateBook",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Book ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Book updated successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Book not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Books"
+        ],
+        "summary": "Delete book",
+        "description": "Deletes a book from the system",
+        "operationId": "deleteBook",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Book ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Access denied"
+          },
+          "404": {
+            "description": "Book not found"
+          },
+          "204": {
+            "description": "Book deleted successfully"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/authors/{id}": {
+      "get": {
+        "tags": [
+          "Authors"
+        ],
+        "summary": "Get author by ID",
+        "description": "Retrieves an author by their ID",
+        "operationId": "getAuthorById",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Author ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Author not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Author found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Authors"
+        ],
+        "summary": "Update author",
+        "description": "Updates an existing author",
+        "operationId": "updateAuthor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Author ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAuthorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "Author updated successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Author not found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Authors"
+        ],
+        "summary": "Delete author",
+        "description": "Deletes an author from the system",
+        "operationId": "deleteAuthor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Author ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "403": {
+            "description": "Access denied"
+          },
+          "204": {
+            "description": "Author deleted successfully"
+          },
+          "404": {
+            "description": "Author not found"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/test/websocket": {
+      "post": {
+        "tags": [
+          "WebSocket"
+        ],
+        "operationId": "testWebSocket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/webhook": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Call webhook",
+        "description": "Calls a webhook in the background",
+        "operationId": "callWebhook",
+        "parameters": [
+          {
+            "name": "url",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "payload",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/send-email": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Send email",
+        "description": "Sends an email in the background",
+        "operationId": "sendEmail",
+        "parameters": [
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "subject",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "body",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/notification": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Process notification",
+        "description": "Processes a notification in the background",
+        "operationId": "processNotification",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "message",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/data-processing": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Start data processing job",
+        "description": "Starts a data processing job",
+        "operationId": "startDataProcessingJob",
+        "parameters": [
+          {
+            "name": "dataId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/jobs/compute-intensive": {
+      "post": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Start compute-intensive job",
+        "description": "Starts a compute-intensive long-running job",
+        "operationId": "startComputeIntensiveJob",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/books": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "summary": "Get all books",
+        "description": "Retrieves all books from the system",
+        "operationId": "getAllBooks",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved list",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Books"
+        ],
+        "summary": "Create a new book",
+        "description": "Creates a new book in the system",
+        "operationId": "createBook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBookRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Book created successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/authors": {
+      "get": {
+        "tags": [
+          "Authors"
+        ],
+        "summary": "Get all authors",
+        "description": "Retrieves all authors from the system",
+        "operationId": "getAllAuthors",
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved list",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Authors"
+        ],
+        "summary": "Create a new author",
+        "description": "Creates a new author in the system",
+        "operationId": "createAuthor",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAuthorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "403": {
+            "description": "Access denied",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Author created successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Login user",
+        "description": "Authenticate user and return JWT token",
+        "operationId": "authenticateUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/api/books": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get all books (public)",
+        "description": "Publicly accessible endpoint to get all books",
+        "operationId": "getAllBooks_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/api/books/{id}": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get book by ID (public)",
+        "description": "Publicly accessible endpoint to get a book by ID",
+        "operationId": "getBookById_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Book ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/api/books/genre/{genre}": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get books by genre (public)",
+        "description": "Publicly accessible endpoint to get books by genre",
+        "operationId": "getBooksByGenre",
+        "parameters": [
+          {
+            "name": "genre",
+            "in": "path",
+            "description": "Genre",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/api/authors": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get all authors (public)",
+        "description": "Publicly accessible endpoint to get all authors",
+        "operationId": "getAllAuthors_1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuthorDto"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/public/api/authors/{id}": {
+      "get": {
+        "tags": [
+          "Public API"
+        ],
+        "summary": "Get author by ID (public)",
+        "description": "Publicly accessible endpoint to get an author by ID",
+        "operationId": "getAuthorById_1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Author ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/books/search": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "summary": "Search books by title",
+        "description": "Searches for books by title",
+        "operationId": "searchBooks",
+        "parameters": [
+          {
+            "name": "title",
+            "in": "query",
+            "description": "Title to search for",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved list",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/books/genre/{genre}": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "summary": "Get books by genre",
+        "description": "Retrieves all books of a specific genre",
+        "operationId": "getBooksByGenre_1",
+        "parameters": [
+          {
+            "name": "genre",
+            "in": "path",
+            "description": "Genre",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved list",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/books/author/{authorId}": {
+      "get": {
+        "tags": [
+          "Books"
+        ],
+        "summary": "Get books by author",
+        "description": "Retrieves all books by a specific author",
+        "operationId": "getBooksByAuthor",
+        "parameters": [
+          {
+            "name": "authorId",
+            "in": "path",
+            "description": "Author ID",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved list",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/authors/search": {
+      "get": {
+        "tags": [
+          "Authors"
+        ],
+        "summary": "Search authors by name",
+        "description": "Searches for authors by name",
+        "operationId": "searchAuthors",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "description": "Name to search for",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved list",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthorDto"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CreateBookRequest": {
+        "required": [
+          "authorId",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Book title",
+            "example": "1984"
+          },
+          "authorId": {
+            "type": "integer",
+            "description": "Author ID",
+            "format": "int64",
+            "example": 1
+          },
+          "genre": {
+            "type": "string",
+            "description": "Book genre",
+            "example": "Dystopian"
+          },
+          "pageCount": {
+            "type": "integer",
+            "description": "Number of pages",
+            "format": "int32",
+            "example": 328
+          },
+          "language": {
+            "type": "string",
+            "description": "Book language",
+            "example": "English"
+          },
+          "publicationDate": {
+            "type": "string",
+            "description": "Publication date",
+            "example": "1949-06-08"
+          }
+        },
+        "description": "Create Book Request"
+      },
+      "BookDto": {
+        "required": [
+          "authorId",
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Book ID",
+            "format": "int64",
+            "example": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Book title",
+            "example": "1984"
+          },
+          "authorId": {
+            "type": "integer",
+            "description": "Author ID",
+            "format": "int64",
+            "example": 1
+          },
+          "authorName": {
+            "type": "string",
+            "description": "Author name",
+            "example": "George Orwell"
+          },
+          "genre": {
+            "type": "string",
+            "description": "Book genre",
+            "example": "Dystopian"
+          },
+          "pageCount": {
+            "type": "integer",
+            "description": "Number of pages",
+            "format": "int32",
+            "example": 328
+          },
+          "language": {
+            "type": "string",
+            "description": "Book language",
+            "example": "English"
+          },
+          "publicationDate": {
+            "type": "string",
+            "description": "Publication date",
+            "format": "date",
+            "example": "1949-06-08"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Creation timestamp",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Last update timestamp",
+            "format": "date-time"
+          }
+        },
+        "description": "Book Data Transfer Object"
+      },
+      "CreateAuthorRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Author name",
+            "example": "George Orwell"
+          },
+          "birthDate": {
+            "type": "string",
+            "description": "Author birth date",
+            "example": "1903-06-25"
+          }
+        },
+        "description": "Create Author Request"
+      },
+      "AuthorDto": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "description": "Author ID",
+            "format": "int64",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Author name",
+            "example": "George Orwell"
+          },
+          "birthDate": {
+            "type": "string",
+            "description": "Author birth date",
+            "format": "date",
+            "example": "1903-06-25"
+          },
+          "bookIds": {
+            "type": "array",
+            "description": "List of book IDs written by this author",
+            "items": {
+              "type": "integer",
+              "description": "List of book IDs written by this author",
+              "format": "int64"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "Creation timestamp",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "Last update timestamp",
+            "format": "date-time"
+          }
+        },
+        "description": "Author Data Transfer Object"
+      },
+      "LoginRequest": {
+        "required": [
+          "password",
+          "username"
+        ],
+        "type": "object",
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "AuthResponse": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "tenantId": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}
